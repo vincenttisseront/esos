@@ -1158,7 +1158,8 @@ bison: make m4
 bzip2: make
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call no_chroot)
-	$(MAKE) --directory=$(tgt_src_dir)
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC"
 	$(MAKE) --directory=$(tgt_src_dir) PREFIX=/tools install
 	$(MAKE) --directory=$(tgt_src_dir) clean
 	$(TOUCH) $(@)
@@ -1435,7 +1436,7 @@ libffi: make
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
-Python: make zlib libffi
+Python: make zlib libffi bzip2
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call no_chroot)
 	$(QUIET) if [ -f $(tgt_src_dir)/setup.py ] && \
