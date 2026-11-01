@@ -3371,6 +3371,7 @@ curl.chroot: glibc.chroot openssl.chroot zlib.chroot
 fio.chroot: glibc.chroot libaio.chroot numactl.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-native
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) mandir=/usr/share/man install
