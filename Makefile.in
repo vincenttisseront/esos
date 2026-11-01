@@ -3597,6 +3597,7 @@ perftest.chroot: glibc.chroot rdma-core.chroot
 nrpe.chroot: glibc.chroot openssl.chroot e2fsprogs.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --sysconfdir=/etc \
 	--enable-ssl --enable-command-args --with-piddir=/var/run
 	$(MAKE) --directory=$(tgt_src_dir) all
