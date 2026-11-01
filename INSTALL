@@ -30,6 +30,11 @@ are: autoconf, build-essential, wget, fdisk, genisoimage (or xorriso), kpartx,
 dosfstools, e2fsprogs, squashfs-tools, cpio, rsync, git, patch, zip, xz-utils,
 bison, flex, texinfo, and gawk.
 
+make fetch still tries http://download.esos-project.com/dist_files first.
+Tarballs the mirror does not carry are listed in dist-upstreams.txt; a
+mirror miss or a bad checksum falls through to that URL, and both
+CHECKSUM.MD5 and CHECKSUM.SHA256 still have to match.
+
 The same steps by hand (adjust -jN):
 autoconf
 ./configure
