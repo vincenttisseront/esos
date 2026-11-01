@@ -1641,7 +1641,7 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	  $(chroot_build)/misc/$(notdir $(linux_src)).patch; \
 	fi
 	$(MAKE) --directory=$(linux_src)/tools/perf \
-	EXTRA_CFLAGS="-Wno-stringop-truncation"
+	EXTRA_CFLAGS="-Wno-stringop-truncation" NO_LIBTRACEEVENT=1
 	$(INSTALL) -m 0755 $(linux_src)/tools/perf/perf /usr/bin/perf
 	$(MAKE) --directory=$(linux_src)/tools/power/x86/x86_energy_perf_policy \
 	install
