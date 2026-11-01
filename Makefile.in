@@ -5277,7 +5277,7 @@ image:
 	    $(UMOUNT) -v $(MOUNT_DIR); \
 	  fi; \
 	  if $(LOSETUP) $(loop_dev) > /dev/null 2>&1; then \
-	    $(KPARTX) -v -d $(loop_dev); \
+	    partx -d $(loop_dev) || true; \
 	    $(LOSETUP) -v -d $(loop_dev); \
 	  fi; \
 	  $(RM) -v $(img_file); \
@@ -5319,23 +5319,17 @@ image:
 	$(ECHO) -e "2048,2097152,EF,*\n2099200,8388608,L\n10487808,4194304,L\n\
 	14682112,2095104,L\n" | $(SFDISK) --no-reread -uS -L $(img_file)
 	$(LOSETUP) -f --show $(img_file) > $(WORK_DIR)/loop_dev
-	$(KPARTX) -a -s $(loop_dev)
+	partx -a $(loop_dev)
 	$(SLEEP) 1
-	$(MKFS_VFAT) -F 32 -n ESOS_BOOT $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p1
-	$(MKFS_EXT4) -I 256 -L esos_root $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p2
-	$(MKFS_EXT4) -I 256 -L esos_conf $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p3
-	$(MKFS_EXT4) -I 256 -L esos_logs $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p4
+	$(MKFS_VFAT) -F 32 -n ESOS_BOOT $(loop_dev)p1
+	$(MKFS_EXT4) -I 256 -L esos_root $(loop_dev)p2
+	$(MKFS_EXT4) -I 256 -L esos_conf $(loop_dev)p3
+	$(MKFS_EXT4) -I 256 -L esos_logs $(loop_dev)p4
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### Installing image (staging)..."
-	$(MOUNT) $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p2 $(MOUNT_DIR) 
+	$(MOUNT) $(loop_dev)p2 $(MOUNT_DIR)
 	$(MKDIR) $(MOUNT_DIR)/boot
-	$(MOUNT) $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p1 $(MOUNT_DIR)/boot
+	$(MOUNT) $(loop_dev)p1 $(MOUNT_DIR)/boot
 	cd $(CHROOT_DIR) && $(FIND) ./boot -depth | \
 	$(CPIO) -pmdvu $(MOUNT_DIR)
 	cd $(CHROOT_DIR) && \
@@ -5504,7 +5498,7 @@ image:
 	$(UMOUNT) $(MOUNT_DIR)/boot
 	$(RMDIR) $(MOUNT_DIR)/boot
 	$(UMOUNT) $(MOUNT_DIR)
-	$(KPARTX) -d $(loop_dev)
+	partx -d $(loop_dev)
 	$(LOSETUP) -d $(loop_dev)
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### Archiving/compressing (sparse) image file..."
