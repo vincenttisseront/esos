@@ -3362,7 +3362,7 @@ curl.chroot: glibc.chroot openssl.chroot zlib.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-static \
-	--with-openssl --without-libssh2 --without-libidn2
+	--with-openssl --without-libssh2 --without-libidn2 --without-libpsl
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(TOUCH) $(@)
