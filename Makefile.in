@@ -3995,7 +3995,7 @@ btrfs-progs.chroot: glibc.chroot util-linux.chroot attr.chroot zlib.chroot \
 	  cd $(tgt_src_dir) && ./autogen.sh; \
 	fi
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-documentation \
-	--disable-zstd
+	--disable-zstd --disable-python
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(TOUCH) $(@)
