@@ -165,7 +165,7 @@ dist_files	= $(addprefix $(DIST_FILES_DIR)/, \
 		automake-1.16.1.tar.xz \
 		libtool-2.4.6.tar.xz \
 		flex-2.6.4.tar.gz \
-		Python-3.9.5.tar.xz \
+		Python-3.12.12.tar.xz \
 		cmake-3.14.4.tar.gz \
 		ninja-1.9.0.tar.gz \
 		meson-0.56.0.tar.gz \
@@ -180,9 +180,9 @@ dist_files	= $(addprefix $(DIST_FILES_DIR)/, \
 		rdma-core-52.0.tar.gz \
 		openssh-10.0p2.tar.gz \
 		ssmtp-2.64.tar.bz2 \
-		openssl-1.1.1w.tar.gz \
+		openssl-3.5.9.tar.gz \
 		e2fsprogs-1.45.1.tar.xz \
-		zlib-1.2.11.tar.xz \
+		zlib-1.3.2.tar.xz \
 		lsscsi-030r154.tar.gz \
 		sg3_utils-1.48.tar.xz \
 		groff-1.22.4.tar.gz \
@@ -213,7 +213,7 @@ dist_files	= $(addprefix $(DIST_FILES_DIR)/, \
 		db-5.3.28.tar.gz \
 		fence-agents-4.3.3.tar.gz \
 		opensm-3.3.20.tar.gz \
-		curl-7.64.1.tar.xz \
+		curl-8.23.0.tar.xz \
 		open-fcoe-3.19.tar.gz \
 		openlldp-1.1.1.tar.gz \
 		libconfig-1.7.2.tar.gz \
@@ -470,7 +470,7 @@ ifeq ($(enable_strace),yes)
 	chroot_tgts += strace.chroot
 endif
 ifeq ($(enable_nginx),yes)
-	dist_files += $(addprefix $(DIST_FILES_DIR)/,nginx-1.16.0.tar.gz)
+	dist_files += $(addprefix $(DIST_FILES_DIR)/,nginx-1.30.6.tar.gz)
 	chroot_tgts += nginx.chroot
 endif
 ifeq ($(enable_python_sql),yes)
@@ -744,17 +744,35 @@ fetch: $(dist_files) ;
 
 $(dist_files):
 	$(QUIET) $(ECHO) "### Fetching $(@)"
-	$(WGET) -P $(DIST_FILES_DIR) $(dist_files_repo)/$(notdir $(@))
+	$(QUIET) if [ ! -f $(@) ]; then \
+	  $(WGET) -P $(DIST_FILES_DIR) $(dist_files_repo)/$(notdir $(@)) || \
+	  $(RM) $(@); \
+	fi
+	$(QUIET) cd $(DIST_FILES_DIR) && \
+	if [ ! -f $(notdir $(@)) ] || ! ( set -o pipefail; \
+	  $(GREP) $(notdir $(@)) $(SRC_DIR)/CHECKSUM.MD5 | $(MD5SUM) -c - && \
+	  $(GREP) $(notdir $(@)) $(SRC_DIR)/CHECKSUM.SHA256 | \
+	  $(SHA256SUM) -c - ); then \
+	  $(RM) $(notdir $(@)); \
+	  url=$$($(GREP) "^$(notdir $(@)) " $(SRC_DIR)/dist-upstreams.txt | \
+	    $(CUT) -d' ' -f2-); \
+	  if [ -z "$$url" ]; then \
+	    $(ECHO) "### Mirror miss and no upstream URL for $(notdir $(@))"; \
+	    exit 1; \
+	  fi; \
+	  $(ECHO) "### Mirror failed, fetching $(notdir $(@)) from upstream"; \
+	  $(WGET) -O $(notdir $(@)) "$$url" || { $(RM) $(notdir $(@)); exit 1; }; \
+	fi
 	$(QUIET) cd $(DIST_FILES_DIR) && \
 	if ! $(GREP) $(notdir $(@)) $(SRC_DIR)/CHECKSUM.MD5 | \
 	  $(MD5SUM) -c -; then \
-	  $(RM) $(@); \
+	  $(RM) $(notdir $(@)); \
 	  exit 1; \
 	fi
 	$(QUIET) cd $(DIST_FILES_DIR) && \
 	if ! $(GREP) $(notdir $(@)) $(SRC_DIR)/CHECKSUM.SHA256 | \
 	  $(SHA256SUM) -c -; then \
-	  $(RM) $(@); \
+	  $(RM) $(notdir $(@)); \
 	  exit 1; \
 	fi
 	$(QUIET) $(ECHO)
@@ -2410,53 +2428,58 @@ Python.chroot: glibc.chroot gcc.chroot bzip2.chroot readline.chroot \
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --enable-shared \
-	--with-ensurepip=upgrade
+	--with-ensurepip=upgrade --with-openssl=/usr
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(INSTALL) -D -m 0644 $(tgt_src_dir)/python-gdb.py \
-	/usr/share/gdb/auto-load/usr/bin/python3.9-gdb.py
-	pip3 install pip==23.0.1
+	/usr/share/gdb/auto-load/usr/bin/python3.12-gdb.py
+	pip3 install pip==26.2.2
 	pip3 install configshell-fb==1.1.29
-	pip3 install docutils==0.17.1
+	pip3 install docutils==0.23
 	pip3 install pbr==5.6.0
 	pip3 install lockfile==0.12.2
 	pip3 install python-daemon==2.3.0
-	pip3 install lxml==4.6.3
+	pip3 install lxml==6.1.3
 	pip3 install suds-py3==1.4.4.1
 	pip3 install ptyprocess==0.7.0
-	pip3 install pexpect==4.8.0
-	PYCURL_SSL_LIBRARY=openssl pip3 install pycurl==7.43.0.6
+	pip3 install pexpect==4.9.0
+	PYCURL_SSL_LIBRARY=openssl pip3 install pycurl==7.49.0
 	pip3 install pyparsing==2.4.7
-	pip3 install requests==2.25.1
-	pip3 install six==1.16.0
+	pip3 install certifi==2026.10.23
+	pip3 install urllib3==2.8.0
+	pip3 install charset-normalizer==3.5.2
+	pip3 install idna==3.20
+	pip3 install requests==2.34.2
+	pip3 install six==1.17.0
 	pip3 install parallax==1.0.6
 	pip3 install py-dateutil==2.2
-	pip3 install PyYAML==5.4.1
-	pip3 install pytz==2021.1
+	pip3 install PyYAML==6.0.3
+	pip3 install pytz==2026.6
 	pip3 install python-pam==1.8.4
-	LDFLAGS=-fno-lto pip3 install uWSGI==2.0.19.1
+	LDFLAGS=-fno-lto pip3 install uWSGI==2.0.31
 	pip3 install pySMART.smartx==0.3.10
 	pip3 install mdstat==1.0.4
 	pip3 install py-dmidecode==0.1.0
 	pip3 install netifaces==0.11.0
 	pip3 install ordered-set==4.0.2
 	pip3 install deepdiff==5.5.0
-	pip3 install pyasn1==0.4.8
-	pip3 install pycparser==2.20
-	pip3 install cffi==1.14.5
-	pip3 install bcrypt==3.2.0
-	pip3 install PyNaCl==1.4.0
+	pip3 install pyasn1==0.6.5
+	pip3 install pycparser==3.12
+	pip3 install cffi==2.1.1
+	pip3 install bcrypt==5.0.0
+	pip3 install PyNaCl==1.6.2
 	pip3 install asn1crypto==1.4.0
-	pip3 install cryptography==3.4.7
-	pip3 install paramiko==2.7.2
+	pip3 install cryptography==50.0.2
+	pip3 install invoke==3.0.3
+	pip3 install paramiko==5.1.0
 	pip3 install tzlocal==2.1
-	pip3 install tzdata==2021.1
-	pip3 install pyudev==0.22.0
+	pip3 install tzdata==2026.6
+	pip3 install pyudev==0.24.5
 	pip3 install rst2html==2020.7.4
 	pip3 install genshi==0.7.5
 	pip3 install pygments==2.9.0
 	pip3 install rst2html5==2.0
-	pip3 install wrapt==1.12.1
+	pip3 install wrapt==2.5.2
 	pip3 install more-itertools==8.8.0
 	pip3 install jaraco.functools==3.3.0
 	pip3 install tempora==4.1.1
@@ -2466,31 +2489,30 @@ Python.chroot: glibc.chroot gcc.chroot bzip2.chroot readline.chroot \
 	pip3 install portend==2.7.1
 	pip3 install jaraco.collections==3.3.0
 	pip3 install cheroot==8.5.2
-	pip3 install cherrypy==18.6.0
-	pip3 install colorama==0.4.4
-	pip3 install pyperclip==1.8.2
+	pip3 install cherrypy==18.10.0
+	pip3 install colorama==0.4.6
+	pip3 install pyperclip==1.11.0
 	pip3 install wcwidth==0.2.5
 	pip3 install attrs==21.2.0
 	pip3 install cmd2==2.2.0
 	pip3 install xmltodict==0.12.0
-	pip3 install aiohttp==3.8.3
-	pip3 install frozenlist==1.3.3
-	pip3 install charset-normalizer==2.1.1
-	pip3 install yarl==1.9.1
-	pip3 install async-timeout==4.0.2
-	pip3 install multidict==6.0.4
-	pip3 install aiosignal==1.3.1
-	pip3 install idna==2.10
-	pip3 install typing-extensions==4.5.0
-	pip3 install async-lru==2.0.2
-	pip3 install caio==0.9.11
+	pip3 install aiohappyeyeballs==2.7.1
+	pip3 install aiosignal==1.4.0
+	pip3 install frozenlist==1.8.0
+	pip3 install multidict==7.2.1
+	pip3 install propcache==0.5.4
+	pip3 install yarl==1.25.1
+	pip3 install aiohttp==3.14.5
+	pip3 install typing-extensions==4.16.0
+	pip3 install async-timeout==5.0.1
+	pip3 install caio==0.9.25
 	pip3 install aiofile==3.8.1
-	pip3 install websockets==11.0.3
-	pip3 install py-spy==0.3.14
+	pip3 install websockets==13.1
+	pip3 install py-spy==0.4.2
 	$(QUIET) if [ "$(enable_python_sql)" = "yes" ]; then \
-	  pip3 install psycopg2==2.8.1; \
-	  pip3 install mysqlclient==2.0.3; \
-	  pip3 install SQLAlchemy==1.4.19; \
+	  pip3 install psycopg2==2.9.13; \
+	  pip3 install mysqlclient==2.3.0; \
+	  pip3 install SQLAlchemy==1.4.54; \
 	fi
 	$(QUIET) if [ "$(enable_memcached)" = "yes" ]; then \
 	  pip3 install pymemcache==3.5.2; \
@@ -2549,7 +2571,7 @@ vixie-cron.chroot: glibc.chroot
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
-openssl.chroot: glibc.chroot gcc.chroot
+openssl.chroot: glibc.chroot gcc.chroot zlib.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	$(call apply_pkg_patch)
@@ -3339,11 +3361,11 @@ fence-agents.chroot: glibc.chroot nss.chroot Python.chroot perl.chroot \
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
-curl.chroot: glibc.chroot openssl.chroot
+curl.chroot: glibc.chroot openssl.chroot zlib.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-static \
-	--without-libssh2 --without-libidn
+	--without-libssh2 --without-libidn2
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(TOUCH) $(@)
