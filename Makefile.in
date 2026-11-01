@@ -4655,8 +4655,12 @@ mstflint.chroot: glibc.chroot openssl.chroot rdma-core.chroot Python.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr
-	$(MAKE) --directory=$(tgt_src_dir)
-	$(MAKE) --directory=$(tgt_src_dir) install
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="$(CFLAGS) -Wno-error=deprecated-declarations" \
+	CXXFLAGS="$(CXXFLAGS) -Wno-error=deprecated-declarations"
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="$(CFLAGS) -Wno-error=deprecated-declarations" \
+	CXXFLAGS="$(CXXFLAGS) -Wno-error=deprecated-declarations" install
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
