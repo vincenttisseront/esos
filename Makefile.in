@@ -2867,7 +2867,6 @@ pacemaker.chroot: glibc.chroot libqb.chroot util-linux.chroot glib.chroot \
 	$(MAKE) --directory=$(tgt_src_dir)/attrd install
 	$(MAKE) --directory=$(tgt_src_dir)/tools install
 	$(MAKE) --directory=$(tgt_src_dir)/xml install
-	$(MAKE) --directory=$(tgt_src_dir)/cts install
 	$(MAKE) --directory=$(tgt_src_dir)/doc install
 	$(MAKE) --directory=$(tgt_src_dir)/extra install
 	$(TOUCH) $(@)
@@ -4494,6 +4493,7 @@ git.chroot: glibc.chroot curl.chroot expat.chroot zlib.chroot openssh.chroot \
 	perl.chroot Python.chroot openssl.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --sysconfdir=/etc \
 	--with-openssl --with-curl --with-expat --without-libpcre \
 	--without-tcltk
