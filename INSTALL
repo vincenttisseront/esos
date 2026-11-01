@@ -33,7 +33,11 @@ bison, flex, texinfo, and gawk.
 make fetch still tries http://download.esos-project.com/dist_files first.
 Tarballs the mirror does not carry are listed in dist-upstreams.txt; a
 mirror miss or a bad checksum falls through to that URL, and both
-CHECKSUM.MD5 and CHECKSUM.SHA256 still have to match.
+CHECKSUM.MD5 and CHECKSUM.SHA256 still have to match. The kernel pin is
+Linux 6.12.115 (longterm, from kernel.org). SCST 3.9 supports that line.
+ZFS 0.8.3 does not, so --enable-zfs stays off until OpenZFS is bumped.
+The Celestica 4.19 cls_switchtec module is not built; Switchtec comes
+from the in-tree switchtec and ntb_hw_switchtec drivers.
 
 The same steps by hand (adjust -jN):
 autoconf

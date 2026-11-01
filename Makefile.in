@@ -132,7 +132,7 @@ dist_files	= $(addprefix $(DIST_FILES_DIR)/, \
 		gmp-6.1.2.tar.xz \
 		mpfr-4.0.2.tar.xz \
 		mpc-1.1.0.tar.gz \
-		linux-5.4.288.tar.xz \
+		linux-6.12.115.tar.xz \
 		glibc-2.29.tar.xz \
 		tcl-8.6.9.tar.xz \
 		expect-5.45.4.tar.xz \
@@ -1621,10 +1621,6 @@ esos_kernels.chroot: mhvtl_src = $(wildcard /sources/mhvtl-*)
 esos_kernels.chroot: eio_src = $(wildcard /sources/EnhanceIO-*)
 esos_kernels.chroot: btier_src = $(wildcard /sources/btier-*)
 esos_kernels.chroot: zfs_src = $(wildcard /sources/zfs-*)
-esos_kernels.chroot: switchtec_src = $(wildcard /sources/cls_switchtec-*)
-esos_kernels.chroot: cls_base = $(switchtec_src)/Driver/Switchtec
-esos_kernels.chroot: switchtec_kern = switchtec-kernel-release_4.19
-esos_kernels.chroot: cls_switchtec = $(cls_base)/$(switchtec_kern)
 ifneq ($(wildcard $(chroot_build)/esos_ver),)
 esos_kernels.chroot: esos_ver := $(shell head -1 $(chroot_build)/esos_ver)
 endif
@@ -1633,7 +1629,8 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	openssl.chroot libcap.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
-	$(QUIET) if [ ! -d $(linux_src)/$(notdir $(linux_src)).patch ]; then \
+	$(QUIET) if [ -s $(chroot_build)/misc/$(notdir $(linux_src)).patch ] && \
+	  [ ! -d $(linux_src)/$(notdir $(linux_src)).patch ]; then \
 	  $(PATCH) -d $(linux_src) -b \
 	  -B $(linux_src)/$(notdir $(linux_src)).patch/ -p1 < \
 	  $(chroot_build)/misc/$(notdir $(linux_src)).patch; \
@@ -1641,10 +1638,9 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	$(MAKE) --directory=$(linux_src)/tools/perf \
 	EXTRA_CFLAGS="-Wno-stringop-truncation"
 	$(INSTALL) -m 0755 $(linux_src)/tools/perf/perf /usr/bin/perf
-	$(MAKE) --directory=$(linux_src)/tools/power/x86/\
-	x86_energy_perf_policy install
-	$(MAKE) --directory=$(linux_src)/tools/power/x86/\
-	turbostat install
+	$(MAKE) --directory=$(linux_src)/tools/power/x86/x86_energy_perf_policy \
+	install
+	$(MAKE) --directory=$(linux_src)/tools/power/x86/turbostat install
 	$(SED) -i 's/\/bin\/true/true/' \
 	$(linux_src)/tools/power/cpupower/Makefile
 	$(MAKE) --directory=$(linux_src)/tools/power/cpupower
@@ -1749,8 +1745,6 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	      $(MAKE) --directory=$(zfs_src) distclean; \
 	    fi; \
 	  fi; \
-	  $(MAKE) --directory=$(cls_switchtec) KDIR=$(linux_src) \
-	  KVER=$(kernel_ver)$$i clean; \
 	  if [ "$$i" = "$(prod_suffix)" ]; then \
 	    $(SED) 's/CONFIG_LOCALVERSION\=\"\"/CONFIG_LOCALVERSION\=\"$(prod_suffix)\"/' \
 	    $(chroot_build)/misc/$(notdir $(linux_src)).config > \
@@ -1798,9 +1792,11 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	    --disable CONFIG_CHELSIO_T4VF \
 	    --disable CONFIG_FRAME_POINTER; \
 	  fi; \
+	  $(ECHO) "### Resolving the kernel config..."; \
+	  $(MAKE) --directory=$(linux_src) olddefconfig; \
 	  $(ECHO) "### Compiling the Linux kernel..."; \
 	  $(MAKE) --directory=$(linux_src); \
-	  $(INSTALL) $(linux_src)/arch/x86_64/boot/bzImage \
+	  $(INSTALL) $(linux_src)/arch/x86/boot/bzImage \
 	  /boot/PRIMARY-bzImage$$i; \
 	  $(ECHO) "### Compressing 'vmlinux' for later use..."; \
 	  $(XZ) -z -c $(linux_src)/vmlinux > \
@@ -2069,11 +2065,7 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	    $(MAKE) --directory=$(zfs_src)/module modules; \
 	    $(MAKE) --directory=$(zfs_src)/module modules_install; \
 	  fi; \
-	  $(ECHO) "### Compiling the Celestica Switchtec NTB driver..."; \
-	  $(CHMOD) +x $(cls_switchtec)/VERSION-GEN; \
-	  $(MAKE) --directory=$(cls_switchtec) MODULE_NAME=cls_switchtec \
-	  KDIR=$(linux_src) KVER=$(kernel_ver)$$i; \
-	  $(MAKE) --directory=$(linux_src) M=$(cls_switchtec) modules_install; \
+	  $(ECHO) "### Switchtec uses the in-tree switchtec and ntb_hw_switchtec modules."; \
 	done
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"

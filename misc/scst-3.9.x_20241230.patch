@@ -51,3 +51,30 @@
  }
  
  #define blkdev_put blkdev_put_backport
+--- a/scst/src/Kbuild
++++ b/scst/src/Kbuild
+@@ -1,6 +1,6 @@
+ # See also Documentation/core-api/symbol-namespaces.rst for more information
+ # about DEFAULT_SYMBOL_NAMESPACE.
+ ccflags-y += -I$(src)/../include	\
+-	-DDEFAULT_SYMBOL_NAMESPACE=SCST	\
++	-DDEFAULT_SYMBOL_NAMESPACE='"SCST"'	\
+ 	$(shell [ -n "${CONFIG_SCST_NO_DLM}" ] && echo -DCONFIG_SCST_NO_DLM)	\
+ 	$(shell [ -n "${REVISION}" ] && echo -DSCST_REVISION=${REVISION})
+--- a/qla2x00t/Kbuild
++++ b/qla2x00t/Kbuild
+@@ -1,4 +1,4 @@
+-ccflags-y += -I$(src)/../scst/include -DDEFAULT_SYMBOL_NAMESPACE=QLA16GB
++ccflags-y += -I$(src)/../scst/include -DDEFAULT_SYMBOL_NAMESPACE='"QLA16GB"'
+ 
+ ifneq ($(CONFIG_SCSI_QLA2XXX_TARGET),)
+ ccflags-y += -DCONFIG_SCSI_QLA2XXX_TARGET=$(CONFIG_SCSI_QLA2XXX_TARGET)
+--- a/qla2x00t-32gbit/Kbuild
++++ b/qla2x00t-32gbit/Kbuild
+@@ -1,5 +1,5 @@
+ ccflags-y += -I$(src)/../scst/include -I$(src)/include		\
+-	-DDEFAULT_SYMBOL_NAMESPACE=QLA32GB
++	-DDEFAULT_SYMBOL_NAMESPACE='"QLA32GB"'
+ 
+ ifneq ($(CONFIG_SCSI_QLA2XXX_TARGET),)
+ ccflags-y += -DCONFIG_SCSI_QLA2XXX_TARGET=$(CONFIG_SCSI_QLA2XXX_TARGET)
