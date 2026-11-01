@@ -29,8 +29,8 @@ else
     echo "ERROR: genisoimage or xorriso is required to build the ISO."
     exit 1
 fi
-if ! command -v kpartx > /dev/null 2>&1; then
-    echo "ERROR: kpartx is required to read the ESOS image partitions."
+if ! command -v partx > /dev/null 2>&1; then
+    echo "ERROR: partx is required to read the ESOS image partitions."
     exit 1
 fi
 
@@ -78,12 +78,12 @@ echo
 
 # Loop device setup
 echo "### Creating loop device..."
-LOOP_DEV="$(losetup -Pf --show ${ESOS_IMAGE})" || exit 1
+LOOP_DEV="$(losetup -f --show ${ESOS_IMAGE})" || exit 1
 if [ "x${LOOP_DEV}" = "x" ]; then
     echo "Unable to get a loop device!"
     exit 1
 fi
-kpartx -a -s "${LOOP_DEV}" || exit 1
+partx -a "${LOOP_DEV}" || exit 1
 sleep 1
 echo
 
@@ -91,16 +91,24 @@ echo
 echo "### Fetching ESOS image components for ISO..."
 MNT_DIR="/tmp/esos2iso_mnt"
 mkdir -p ${MNT_DIR} || exit 1
-mount "$(echo ${LOOP_DEV} | sed 's/^\/dev/\/dev\/mapper/')p1" \
-    ${MNT_DIR} || exit 1
-cp ${MNT_DIR}/*initramfs* ${TEMP_DIR}/isolinux/initrd.img || exit 1
-cp ${MNT_DIR}/*bzImage*prod ${TEMP_DIR}/isolinux/vmlinuz || exit 1
-umount ${MNT_DIR} || exit 1
-mount "$(echo ${LOOP_DEV} | sed 's/^\/dev/\/dev\/mapper/')p2" \
-    ${MNT_DIR} || exit 1
+BOOT_PART="${LOOP_DEV}p1"
+ROOT_PART="${LOOP_DEV}p2"
+if mount -t vfat "${BOOT_PART}" ${MNT_DIR}; then
+    cp ${MNT_DIR}/*initramfs* ${TEMP_DIR}/isolinux/initrd.img || exit 1
+    cp ${MNT_DIR}/*bzImage*prod ${TEMP_DIR}/isolinux/vmlinuz || exit 1
+    umount ${MNT_DIR} || exit 1
+else
+    echo "### Reading the boot partition with mtools..."
+    command -v mcopy > /dev/null 2>&1 || exit 1
+    MTOOLS_SKIP_CHECK=1 mcopy -i "${BOOT_PART}" \
+        ::/PRIMARY-initramfs.cpio.gz ${TEMP_DIR}/isolinux/initrd.img || exit 1
+    MTOOLS_SKIP_CHECK=1 mcopy -i "${BOOT_PART}" \
+        ::/PRIMARY-bzImage-esos.prod ${TEMP_DIR}/isolinux/vmlinuz || exit 1
+fi
+mount "${ROOT_PART}" ${MNT_DIR} || exit 1
 cp ${MNT_DIR}/*-root.sqsh ${TEMP_DIR}/ || exit 1
 umount ${MNT_DIR} || exit 1
-kpartx -d ${LOOP_DEV} || exit 1
+partx -d ${LOOP_DEV} || exit 1
 losetup -d ${LOOP_DEV} || exit 1
 echo
 

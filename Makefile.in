@@ -5329,7 +5329,15 @@ image:
 	$(QUIET) $(ECHO) "### Installing image (staging)..."
 	$(MOUNT) $(loop_dev)p2 $(MOUNT_DIR)
 	$(MKDIR) $(MOUNT_DIR)/boot
-	$(MOUNT) $(loop_dev)p1 $(MOUNT_DIR)/boot
+	$(RM) $(WORK_DIR)/boot-stage
+	$(MKDIR) $(WORK_DIR)/boot-stage
+	if $(MOUNT) -t vfat $(loop_dev)p1 $(MOUNT_DIR)/boot; then \
+	  echo vfat > $(WORK_DIR)/boot-fs; \
+	else \
+	  $(ECHO) "### Kernel has no vfat; staging the boot partition."; \
+	  $(MOUNT) --bind $(WORK_DIR)/boot-stage $(MOUNT_DIR)/boot; \
+	  echo mtools > $(WORK_DIR)/boot-fs; \
+	fi
 	cd $(CHROOT_DIR) && $(FIND) ./boot -depth | \
 	$(CPIO) -pmdvu $(MOUNT_DIR)
 	cd $(CHROOT_DIR) && \
@@ -5352,24 +5360,34 @@ image:
 	$(STAGING_DIR)/usr/share/doc/esos/ChangeLog
 	cd $(SRC_DIR)/etc && $(FIND) . -depth ! -path "*/.git*" | \
 	$(CPIO) -pmdvu $(STAGING_DIR)/etc
-	$(chroot_build)/grub-install \
-	--directory=$(CHROOT_DIR)/usr/lib/grub/i386-pc \
-	--grub-setup=$(chroot_build)/grub-bios-setup \
-	--grub-mkimage=$(chroot_build)/grub-mkimage \
-	--grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
-	--grub-probe=$(chroot_build)/grub-probe \
-	--root-directory=$(MOUNT_DIR) --debug --no-floppy $(loop_dev)
-	$(chroot_build)/grub-install \
-	--directory=$(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
-	--grub-setup=$(chroot_build)/grub-bios-setup \
-	--grub-mkimage=$(chroot_build)/grub-mkimage \
-	--grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
-	--grub-probe=$(chroot_build)/grub-probe \
-	--efi-directory=$(MOUNT_DIR)/boot --root-directory=$(MOUNT_DIR) \
-	--no-nvram --removable --recheck --debug
+	if [ "$$(cat $(WORK_DIR)/boot-fs)" = "vfat" ]; then \
+	  $(chroot_build)/grub-install \
+	  --directory=$(CHROOT_DIR)/usr/lib/grub/i386-pc \
+	  --grub-setup=$(chroot_build)/grub-bios-setup \
+	  --grub-mkimage=$(chroot_build)/grub-mkimage \
+	  --grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
+	  --grub-probe=$(chroot_build)/grub-probe \
+	  --root-directory=$(MOUNT_DIR) --debug --no-floppy $(loop_dev); \
+	  $(chroot_build)/grub-install \
+	  --directory=$(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
+	  --grub-setup=$(chroot_build)/grub-bios-setup \
+	  --grub-mkimage=$(chroot_build)/grub-mkimage \
+	  --grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
+	  --grub-probe=$(chroot_build)/grub-probe \
+	  --efi-directory=$(MOUNT_DIR)/boot --root-directory=$(MOUNT_DIR) \
+	  --no-nvram --removable --recheck --debug; \
+	fi
+	$(MKDIR) $(MOUNT_DIR)/boot/grub
 	$(SED) 's/@@short_prod@@/$(short_prod)/g' $(SRC_DIR)/misc/grub.cfg > \
 	$(MOUNT_DIR)/boot/grub/grub.cfg
 	$(ECHO) "set slot_ver=$(esos_ver)" > $(MOUNT_DIR)/boot/PRIMARY-version
+	if [ "$$(cat $(WORK_DIR)/boot-fs)" = "mtools" ]; then \
+	  $(SRC_DIR)/misc/install-fat-boot.sh $(loop_dev) $(loop_dev)p1 \
+	  $(MOUNT_DIR)/boot \
+	  $(CHROOT_DIR)/usr/lib/grub/i386-pc \
+	  $(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
+	  $(chroot_build)/grub-mkimage $(chroot_build)/grub-bios-setup; \
+	fi
 	$(INSTALL) $(SRC_DIR)/scripts/conf_sync.sh \
 	$(STAGING_DIR)/usr/local/sbin/
 	$(INSTALL) $(SRC_DIR)/scripts/usb_sync.sh \
