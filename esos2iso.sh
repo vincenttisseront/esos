@@ -83,7 +83,7 @@ if [ "x${LOOP_DEV}" = "x" ]; then
     echo "Unable to get a loop device!"
     exit 1
 fi
-partx -a "${LOOP_DEV}" || exit 1
+partx -a "${LOOP_DEV}" || [ -b "${LOOP_DEV}p1" ] || exit 1
 sleep 1
 echo
 

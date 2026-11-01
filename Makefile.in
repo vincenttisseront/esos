@@ -5530,6 +5530,7 @@ image:
 	$(QUIET) $(ECHO) "### Clearing the staging directory..."
 	$(RM) $(STAGING_DIR)
 	$(MKDIR) $(STAGING_DIR)
+	$(ECHO) "$(product) $(esos_ver)" > $(BUILD_DIR)/VERSION
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### All done; your ESOS disk image file is ready!"
 
