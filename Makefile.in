@@ -117,7 +117,7 @@ git_tag		:= $(shell if tag="$$($(GIT) --git-dir=$(SRC_DIR)/.git \
 		then echo -n "$$tag"; else echo -n ""; fi)
 rel_name	:= $(git_tag)$(opt_suffix)
 dev_name	:= $(git_branch)_$(git_hash)$(opt_suffix)
-esos_ver	:= $(if $(git_tag),$(rel_name),$(dev_name))
+esos_ver	:= $(subst /,-,$(if $(git_tag),$(rel_name),$(dev_name)))
 product		:= Enterprise Storage OS
 short_prod	:= ESOS
 pkg_name	:= esos
