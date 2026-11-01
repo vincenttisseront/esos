@@ -1,0 +1,27 @@
+--- a/os/os-linux.h
++++ b/os/os-linux.h
+@@ -14,7 +14,23 @@
+ #include <errno.h>
+ #include <sched.h>
+ #include <linux/unistd.h>
+-#include <linux/raw.h>
++#ifdef __has_include
++#  if __has_include(<linux/raw.h>)
++#    include <linux/raw.h>
++#    define FIO_HAVE_LINUX_RAW_H 1
++#  endif
++#endif
++#ifndef FIO_HAVE_LINUX_RAW_H
++/* linux/raw.h left the kernel uapi. The raw block driver is gone,
++ * but fio still looks up RAW_MAJOR bindings when that device exists. */
++#include <linux/types.h>
++#define RAW_GETBIND _IO(0xac, 1)
++struct raw_config_request {
++	int raw_minor;
++	__u64 block_major;
++	__u64 block_minor;
++};
++#endif
+ #include <linux/major.h>
+ #include <linux/fs.h>
+ #include <scsi/sg.h>

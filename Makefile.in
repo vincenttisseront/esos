@@ -117,7 +117,7 @@ git_tag		:= $(shell if tag="$$($(GIT) --git-dir=$(SRC_DIR)/.git \
 		then echo -n "$$tag"; else echo -n ""; fi)
 rel_name	:= $(git_tag)$(opt_suffix)
 dev_name	:= $(git_branch)_$(git_hash)$(opt_suffix)
-esos_ver	:= $(if $(git_tag),$(rel_name),$(dev_name))
+esos_ver	:= $(subst /,-,$(if $(git_tag),$(rel_name),$(dev_name)))
 product		:= Enterprise Storage OS
 short_prod	:= ESOS
 pkg_name	:= esos
@@ -169,7 +169,7 @@ dist_files	= $(addprefix $(DIST_FILES_DIR)/, \
 		cmake-3.14.4.tar.gz \
 		ninja-1.9.0.tar.gz \
 		meson-0.56.0.tar.gz \
-		setuptools-28.6.0.tar.gz \
+		setuptools-69.5.1.tar.gz \
 		ocaml-4.12.0.tar.gz \
 		findlib-1.9.1.tar.gz \
 		Linux-PAM-1.3.1.tar.xz \
@@ -1158,7 +1158,8 @@ bison: make m4
 bzip2: make
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call no_chroot)
-	$(MAKE) --directory=$(tgt_src_dir)
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC"
 	$(MAKE) --directory=$(tgt_src_dir) PREFIX=/tools install
 	$(MAKE) --directory=$(tgt_src_dir) clean
 	$(TOUCH) $(@)
@@ -1435,19 +1436,23 @@ libffi: make
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
-Python: make zlib libffi
+Python: make zlib libffi bzip2
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call no_chroot)
-	$(QUIET) if [ ! -f $(tgt_src_dir)/setup.py.orig ]; then \
+	$(QUIET) if [ -f $(tgt_src_dir)/setup.py ] && \
+	  [ ! -f $(tgt_src_dir)/setup.py.orig ]; then \
 	  $(CP) $(tgt_src_dir)/setup.py $(tgt_src_dir)/setup.py.orig; \
 	  $(SED) -i '/def add_multiarch_paths/a \        return' \
 	  $(tgt_src_dir)/setup.py; \
 	fi
 	cd $(tgt_src_dir) && PKG_CONFIG_PATH=/tools/lib/pkgconfig \
+	PKG_CONFIG_LIBDIR=/tools/lib/pkgconfig \
 	./configure --prefix=/tools --without-ensurepip --with-system-ffi
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
-	$(MV) $(tgt_src_dir)/setup.py.orig $(tgt_src_dir)/setup.py
+	$(QUIET) if [ -f $(tgt_src_dir)/setup.py.orig ]; then \
+	  $(MV) $(tgt_src_dir)/setup.py.orig $(tgt_src_dir)/setup.py; \
+	fi
 	- $(MAKE) --directory=$(tgt_src_dir) distclean
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
@@ -1636,7 +1641,8 @@ esos_kernels.chroot: kernel_headers.chroot bc.chroot elfutils.chroot \
 	  $(chroot_build)/misc/$(notdir $(linux_src)).patch; \
 	fi
 	$(MAKE) --directory=$(linux_src)/tools/perf \
-	EXTRA_CFLAGS="-Wno-stringop-truncation"
+	EXTRA_CFLAGS="-Wno-stringop-truncation" NO_LIBTRACEEVENT=1 \
+	NO_LIBPYTHON=1
 	$(INSTALL) -m 0755 $(linux_src)/tools/perf/perf /usr/bin/perf
 	$(MAKE) --directory=$(linux_src)/tools/power/x86/x86_energy_perf_policy \
 	install
@@ -2426,6 +2432,7 @@ Python.chroot: glibc.chroot gcc.chroot bzip2.chroot readline.chroot \
 	$(INSTALL) -D -m 0644 $(tgt_src_dir)/python-gdb.py \
 	/usr/share/gdb/auto-load/usr/bin/python3.12-gdb.py
 	pip3 install pip==26.2.2
+	pip3 install setuptools==68.1.2
 	pip3 install configshell-fb==1.1.29
 	pip3 install docutils==0.23
 	pip3 install pbr==5.6.0
@@ -2860,7 +2867,6 @@ pacemaker.chroot: glibc.chroot libqb.chroot util-linux.chroot glib.chroot \
 	$(MAKE) --directory=$(tgt_src_dir)/attrd install
 	$(MAKE) --directory=$(tgt_src_dir)/tools install
 	$(MAKE) --directory=$(tgt_src_dir)/xml install
-	$(MAKE) --directory=$(tgt_src_dir)/cts install
 	$(MAKE) --directory=$(tgt_src_dir)/doc install
 	$(MAKE) --directory=$(tgt_src_dir)/extra install
 	$(TOUCH) $(@)
@@ -3357,7 +3363,7 @@ curl.chroot: glibc.chroot openssl.chroot zlib.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-static \
-	--without-libssh2 --without-libidn2
+	--with-openssl --without-libssh2 --without-libidn2 --without-libpsl
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(TOUCH) $(@)
@@ -3366,6 +3372,7 @@ curl.chroot: glibc.chroot openssl.chroot zlib.chroot
 fio.chroot: glibc.chroot libaio.chroot numactl.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-native
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) mandir=/usr/share/man install
@@ -3479,6 +3486,8 @@ dlm.chroot: glibc.chroot corosync.chroot libxml2.chroot pacemaker.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	$(call apply_pkg_patch)
+	$(MKDIR) /usr/include/linux
+	$(CP) $(chroot_build)/misc/dlm_netlink.h /usr/include/linux/dlm_netlink.h
 	$(MAKE) --directory=$(tgt_src_dir) USE_SD_NOTIFY=no
 	$(SED) -e '/$$(INSTALL) -d $$(DESTDIR)\/$$(MANDIR)\/man8/ s/^#*/#/' \
 	-i $(tgt_src_dir)/fence/Makefile
@@ -3589,6 +3598,7 @@ perftest.chroot: glibc.chroot rdma-core.chroot
 nrpe.chroot: glibc.chroot openssl.chroot e2fsprogs.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --sysconfdir=/etc \
 	--enable-ssl --enable-command-args --with-piddir=/var/run
 	$(MAKE) --directory=$(tgt_src_dir) all
@@ -3986,7 +3996,7 @@ btrfs-progs.chroot: glibc.chroot util-linux.chroot attr.chroot zlib.chroot \
 	  cd $(tgt_src_dir) && ./autogen.sh; \
 	fi
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --disable-documentation \
-	--disable-zstd
+	--disable-zstd --disable-python
 	$(MAKE) --directory=$(tgt_src_dir)
 	$(MAKE) --directory=$(tgt_src_dir) install
 	$(TOUCH) $(@)
@@ -4485,6 +4495,7 @@ git.chroot: glibc.chroot curl.chroot expat.chroot zlib.chroot openssh.chroot \
 	perl.chroot Python.chroot openssl.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
+	$(call apply_pkg_patch)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr --sysconfdir=/etc \
 	--with-openssl --with-curl --with-expat --without-libpcre \
 	--without-tcltk
@@ -4646,8 +4657,13 @@ mstflint.chroot: glibc.chroot openssl.chroot rdma-core.chroot Python.chroot
 	$(QUIET) $(ECHO) "### Building $(@)"
 	$(call chroot_only)
 	cd $(tgt_src_dir) && ./configure --prefix=/usr
-	$(MAKE) --directory=$(tgt_src_dir)
-	$(MAKE) --directory=$(tgt_src_dir) install
+	$(MAKE) --directory=$(tgt_src_dir) clean
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="$(CFLAGS) -DMST_UL -DHAVE_TERMIOS_H -Wno-error=deprecated-declarations" \
+	CXXFLAGS="$(CXXFLAGS) -DMST_UL -DHAVE_TERMIOS_H -Wno-error=deprecated-declarations"
+	$(MAKE) --directory=$(tgt_src_dir) \
+	CFLAGS="$(CFLAGS) -DMST_UL -DHAVE_TERMIOS_H -Wno-error=deprecated-declarations" \
+	CXXFLAGS="$(CXXFLAGS) -DMST_UL -DHAVE_TERMIOS_H -Wno-error=deprecated-declarations" install
 	$(TOUCH) $(@)
 	$(QUIET) $(ECHO) "### Done $(@)"
 
@@ -5261,7 +5277,7 @@ image:
 	    $(UMOUNT) -v $(MOUNT_DIR); \
 	  fi; \
 	  if $(LOSETUP) $(loop_dev) > /dev/null 2>&1; then \
-	    $(KPARTX) -v -d $(loop_dev); \
+	    partx -d $(loop_dev) || true; \
 	    $(LOSETUP) -v -d $(loop_dev); \
 	  fi; \
 	  $(RM) -v $(img_file); \
@@ -5303,23 +5319,25 @@ image:
 	$(ECHO) -e "2048,2097152,EF,*\n2099200,8388608,L\n10487808,4194304,L\n\
 	14682112,2095104,L\n" | $(SFDISK) --no-reread -uS -L $(img_file)
 	$(LOSETUP) -f --show $(img_file) > $(WORK_DIR)/loop_dev
-	$(KPARTX) -a -s $(loop_dev)
+	partx -a $(loop_dev)
 	$(SLEEP) 1
-	$(MKFS_VFAT) -F 32 -n ESOS_BOOT $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p1
-	$(MKFS_EXT4) -I 256 -L esos_root $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p2
-	$(MKFS_EXT4) -I 256 -L esos_conf $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p3
-	$(MKFS_EXT4) -I 256 -L esos_logs $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p4
+	$(MKFS_VFAT) -F 32 -n ESOS_BOOT $(loop_dev)p1
+	$(MKFS_EXT4) -I 256 -L esos_root $(loop_dev)p2
+	$(MKFS_EXT4) -I 256 -L esos_conf $(loop_dev)p3
+	$(MKFS_EXT4) -I 256 -L esos_logs $(loop_dev)p4
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### Installing image (staging)..."
-	$(MOUNT) $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p2 $(MOUNT_DIR) 
+	$(MOUNT) $(loop_dev)p2 $(MOUNT_DIR)
 	$(MKDIR) $(MOUNT_DIR)/boot
-	$(MOUNT) $$($(ECHO) $(loop_dev) | \
-	$(SED) 's/^\/dev/\/dev\/mapper/')p1 $(MOUNT_DIR)/boot
+	$(RM) $(WORK_DIR)/boot-stage
+	$(MKDIR) $(WORK_DIR)/boot-stage
+	if $(MOUNT) -t vfat $(loop_dev)p1 $(MOUNT_DIR)/boot; then \
+	  echo vfat > $(WORK_DIR)/boot-fs; \
+	else \
+	  $(ECHO) "### Kernel has no vfat; staging the boot partition."; \
+	  $(MOUNT) --bind $(WORK_DIR)/boot-stage $(MOUNT_DIR)/boot; \
+	  echo mtools > $(WORK_DIR)/boot-fs; \
+	fi
 	cd $(CHROOT_DIR) && $(FIND) ./boot -depth | \
 	$(CPIO) -pmdvu $(MOUNT_DIR)
 	cd $(CHROOT_DIR) && \
@@ -5342,24 +5360,34 @@ image:
 	$(STAGING_DIR)/usr/share/doc/esos/ChangeLog
 	cd $(SRC_DIR)/etc && $(FIND) . -depth ! -path "*/.git*" | \
 	$(CPIO) -pmdvu $(STAGING_DIR)/etc
-	$(chroot_build)/grub-install \
-	--directory=$(CHROOT_DIR)/usr/lib/grub/i386-pc \
-	--grub-setup=$(chroot_build)/grub-bios-setup \
-	--grub-mkimage=$(chroot_build)/grub-mkimage \
-	--grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
-	--grub-probe=$(chroot_build)/grub-probe \
-	--root-directory=$(MOUNT_DIR) --debug --no-floppy $(loop_dev)
-	$(chroot_build)/grub-install \
-	--directory=$(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
-	--grub-setup=$(chroot_build)/grub-bios-setup \
-	--grub-mkimage=$(chroot_build)/grub-mkimage \
-	--grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
-	--grub-probe=$(chroot_build)/grub-probe \
-	--efi-directory=$(MOUNT_DIR)/boot --root-directory=$(MOUNT_DIR) \
-	--no-nvram --removable --recheck --debug
+	if [ "$$(cat $(WORK_DIR)/boot-fs)" = "vfat" ]; then \
+	  $(chroot_build)/grub-install \
+	  --directory=$(CHROOT_DIR)/usr/lib/grub/i386-pc \
+	  --grub-setup=$(chroot_build)/grub-bios-setup \
+	  --grub-mkimage=$(chroot_build)/grub-mkimage \
+	  --grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
+	  --grub-probe=$(chroot_build)/grub-probe \
+	  --root-directory=$(MOUNT_DIR) --debug --no-floppy $(loop_dev); \
+	  $(chroot_build)/grub-install \
+	  --directory=$(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
+	  --grub-setup=$(chroot_build)/grub-bios-setup \
+	  --grub-mkimage=$(chroot_build)/grub-mkimage \
+	  --grub-mkrelpath=$(chroot_build)/grub-mkrelpath \
+	  --grub-probe=$(chroot_build)/grub-probe \
+	  --efi-directory=$(MOUNT_DIR)/boot --root-directory=$(MOUNT_DIR) \
+	  --no-nvram --removable --recheck --debug; \
+	fi
+	$(MKDIR) $(MOUNT_DIR)/boot/grub
 	$(SED) 's/@@short_prod@@/$(short_prod)/g' $(SRC_DIR)/misc/grub.cfg > \
 	$(MOUNT_DIR)/boot/grub/grub.cfg
 	$(ECHO) "set slot_ver=$(esos_ver)" > $(MOUNT_DIR)/boot/PRIMARY-version
+	if [ "$$(cat $(WORK_DIR)/boot-fs)" = "mtools" ]; then \
+	  $(SRC_DIR)/misc/install-fat-boot.sh $(loop_dev) $(loop_dev)p1 \
+	  $(MOUNT_DIR)/boot \
+	  $(CHROOT_DIR)/usr/lib/grub/i386-pc \
+	  $(CHROOT_DIR)/usr/lib/grub/x86_64-efi \
+	  $(chroot_build)/grub-mkimage $(chroot_build)/grub-bios-setup; \
+	fi
 	$(INSTALL) $(SRC_DIR)/scripts/conf_sync.sh \
 	$(STAGING_DIR)/usr/local/sbin/
 	$(INSTALL) $(SRC_DIR)/scripts/usb_sync.sh \
@@ -5488,7 +5516,7 @@ image:
 	$(UMOUNT) $(MOUNT_DIR)/boot
 	$(RMDIR) $(MOUNT_DIR)/boot
 	$(UMOUNT) $(MOUNT_DIR)
-	$(KPARTX) -d $(loop_dev)
+	partx -d $(loop_dev)
 	$(LOSETUP) -d $(loop_dev)
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### Archiving/compressing (sparse) image file..."
@@ -5502,6 +5530,7 @@ image:
 	$(QUIET) $(ECHO) "### Clearing the staging directory..."
 	$(RM) $(STAGING_DIR)
 	$(MKDIR) $(STAGING_DIR)
+	$(ECHO) "$(product) $(esos_ver)" > $(BUILD_DIR)/VERSION
 	$(QUIET) $(ECHO) && $(ECHO)
 	$(QUIET) $(ECHO) "### All done; your ESOS disk image file is ready!"
 

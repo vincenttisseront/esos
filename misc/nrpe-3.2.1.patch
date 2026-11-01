@@ -1,0 +1,29 @@
+--- a/src/nrpe.c	2026-11-01 16:58:04.640144850 +0000
++++ b/src/nrpe.c	2026-11-01 16:58:04.664144852 +0000
+@@ -42,7 +42,9 @@
+ 
+ #ifdef HAVE_SSL
+ # ifdef USE_SSL_DH
+-#  include "../include/dh.h"
++#  if OPENSSL_VERSION_NUMBER < 0x30000000L
++#   include "../include/dh.h"
++#  endif
+ # endif
+ #endif
+ #ifndef HAVE_ASPRINTF
+@@ -453,9 +455,15 @@
+ 		}
+ 
+ #ifdef USE_SSL_DH
++# if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		dh = get_dh2048();
+ 		SSL_CTX_set_tmp_dh(ctx, dh);
+ 		DH_free(dh);
++# else
++		/* OpenSSL 3 removed `openssl dhparam -C`, so dh.h is empty.
++		 * Built-in groups cover DHE; anonymous DH stays off by default. */
++		SSL_CTX_set_dh_auto(ctx, 1);
++# endif
+ #endif
+ 	}
+ 
