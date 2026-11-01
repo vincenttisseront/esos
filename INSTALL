@@ -15,7 +15,22 @@ build instructions: http://www.esos-project.com/
 If this source is coming from GitHub then you will need to generate the
 configure script, otherwise if this is a release, it should already be present.
 
-The following should work in most cases (adjust -jN flag to your liking):
+The install ISO is produced by one script, which runs configure, the
+bootstrap, the chroot build, the disk image, and esos2iso.sh:
+
+sudo ./build-install-iso.sh
+
+Check the host tools first, without starting the build:
+
+./build-install-iso.sh --check
+
+Pass a job count with -j (the default is the processor count). The script
+must be root for the build itself. On Debian or Ubuntu the usual packages
+are: autoconf, build-essential, wget, fdisk, genisoimage (or xorriso), kpartx,
+dosfstools, e2fsprogs, squashfs-tools, cpio, rsync, git, patch, zip, xz-utils,
+bison, flex, texinfo, and gawk.
+
+The same steps by hand (adjust -jN):
 autoconf
 ./configure
 sudo make symlink
@@ -23,12 +38,10 @@ make -j5 -w -Orecurse > /tmp/bootstrap.out 2>&1
 sudo ./chroot_build.sh -j5 -w -Orecurse > /tmp/chroot.out 2>&1
 sudo rm /tools
 sudo make image
+sudo ./esos2iso.sh isolinux
 
 If you would like to create a distribution tarball package:
 make pkg_dist
-
-You can also create a bootable ESOS ISO installer:
-sudo ./esos2iso.sh isolinux
 
 Installing ESOS to a USB flash drive:
 Once you have successfully built ESOS following the directions above, or you
