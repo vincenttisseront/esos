@@ -59,7 +59,7 @@ if ! command -v genisoimage > /dev/null 2>&1 && \
 fi
 
 echo "### Image pins"
-grep -E '^[[:space:]]+(linux-5\.|openssl-|scst-3|glibc-2\.|Python-3)' \
+grep -E '^[[:space:]]+(linux-[0-9]|openssl-|scst-3|glibc-2\.|Python-3)' \
     Makefile.in || true
 if [ -f dist-upstreams.txt ]; then
     echo "### Upstream fallback when the ESOS mirror misses: dist-upstreams.txt"
