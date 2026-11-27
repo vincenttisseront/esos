@@ -36,7 +36,7 @@ f6e931e319531b736fadc017f470e68a  pkg-config-0.29.2.tar.gz
 53f38e7591fa57c3d2cee682be668e5b  automake-1.16.1.tar.xz
 1bfb9b923f2c1339b4d2ce1807064aa5  libtool-2.4.6.tar.xz
 2882e3179748cc9f9c23ec593d6adc8d  flex-2.6.4.tar.gz
-71f7ada6bec9cdbf4538adc326120cfd  Python-3.9.5.tar.xz
+04feb01316c7bb1b448001adbc63dd23  Python-3.12.12.tar.xz
 1495548397cbfef325a8d153a8720d72  cmake-3.14.4.tar.gz
 f340be768a76724b83e6daab69009902  ninja-1.9.0.tar.gz
 67ce2c0c3eab1b8ee9ddaa1c5143e7c0  meson-0.56.0.tar.gz
@@ -48,7 +48,7 @@ d10dabb9f74830008244a5e356f837df  e2fsprogs-1.45.1.tar.xz
 65b4e0df4934a6cd08c506cabcbe584f  ssmtp-2.64.tar.bz2
 885ae742d51dbae8d16f535455c0240a  sysvinit-2.94.tar.xz
 09dc04f9879684d27c64c910174a9536  vixie-cron-4.1.tar.bz2
-85adef240c5f370b308da8c938951a68  zlib-1.2.11.tar.xz
+be8a129ec5d60c5084911fd7ea16d84e  zlib-1.3.2.tar.xz
 dd017844c55713bd335aa229e6841d41  libibumad-1.3.10.2.tar.gz
 1544ebb89d861ce84057ab43dfcd22a0  libibverbs-1.2.1.tar.gz
 2a0929159acdd9d69da91e2fb2b746da  libcxgb3-1.3.1.tar.gz
@@ -82,7 +82,7 @@ fd03df6965f8f56dd5b8518ca43b4f5e  tokyocabinet-1.4.48.tar.gz
 b99454564d5b4479750567031d66fe24  db-5.3.28.tar.gz
 ee9086291c9ae8deb4dac5e0b85bf54a  snappy-1.1.7.tar.gz
 c61d9b7fbd31d707331e93a7193d8c4a  fence-agents-4.3.3.tar.gz
-8d22827310223f24d8eacc866722cc10  curl-7.64.1.tar.xz
+f28835fef6d894c0559d5dbc0c071760  curl-8.23.0.tar.xz
 d2514080116c1b0fa5f96295c84538e3  Net-Telnet-3.04.tar.gz
 12db138afb9b8b39b30458341de6f2ec  fio-3.13.tar.xz
 866818c22a9099e40a8b219cc7239d48  open-fcoe-3.19.tar.gz
@@ -126,7 +126,7 @@ d2d668223e795dcf750da44dc3e7076b  cryptsetup-1.7.5.tar.xz
 3743beefa3dd6247a73f8f7a32c14c33  popt-1.16.tar.gz
 0024393d2d2942cc081ce613d98db68a  sg3_utils-1.48.tar.xz
 077e4f49320cad82bf17a997068b1db9  elfutils-0.176.tar.bz2
-3f76825f195e52d4b10c70040681a275  openssl-1.1.1w.tar.gz
+382c33039018809e6351539e9bdcd509  openssl-3.5.9.tar.gz
 696ccedc02c5a44b8b33641902792241  libusb_compat-0.1.7.tar.xz
 d3d3a48d0157e6a92abe25f7484036aa  win_binaries-20180813.tar.xz
 ce8f0e44671fb0c7d9ec30bb0bfa8b5c  mtx-1.3.12.tar.gz
@@ -205,7 +205,7 @@ f3eeaed018542963b7d2416ef1135ecc  libevent-2.1.8-stable.tar.gz
 4652c49cf096a64683c05f54b4fa4679  hdparm-9.58.tar.gz
 c1635a5a83b63aca7f97a3eab39ebaa6  kbd-2.0.4.tar.xz
 e775489c9f024a92ca0f431301ef4c5c  pcre-8.43.tar.gz
-97207283f30cd90cdba638c3ea30323a  nginx-1.16.0.tar.gz
+6005841c1f9303bc2ef413dc996b880a  nginx-1.30.6.tar.gz
 07a1050db1a898e9a2e03b0c4569c4bd  dosfstools-4.1.tar.xz
 655f581a85af691c48bac38aa6f43f1e  lsof-4.91.tar.xz
 09a38a6fb8ba8500c28df647496d9381  blktrace-master_20181015.tar.xz
