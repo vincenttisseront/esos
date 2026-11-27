@@ -4,8 +4,8 @@
 # path to an "isolinux" directory containing the ISO Linux components,
 # including the "isolinux.cfg" config file, and any optional additional files
 # that should be added to the root of the ISO image. The script then uses
-# "genisoimage" to create the actual ESOS ISO. This ISO can then be booted to
-# install ESOS on any machine that supports it.
+# genisoimage, or xorriso in mkisofs mode, to create the actual ESOS ISO.
+# This ISO can then be booted to install ESOS on any machine that supports it.
 
 usage() {
     echo "### Usage: $(basename ${0}) ISOLINUX_DIR [ADDITIONAL_FILES]"
@@ -18,6 +18,19 @@ usage() {
 # This script requires root access (losetup, mount, etc.)
 if [ "x$(whoami)" != "xroot" ]; then
     echo "### This tool requires root privileges."
+    exit 1
+fi
+
+if command -v genisoimage > /dev/null 2>&1; then
+    mkisofs() { genisoimage "$@"; }
+elif command -v xorriso > /dev/null 2>&1; then
+    mkisofs() { xorriso -as mkisofs "$@"; }
+else
+    echo "ERROR: genisoimage or xorriso is required to build the ISO."
+    exit 1
+fi
+if ! command -v kpartx > /dev/null 2>&1; then
+    echo "ERROR: kpartx is required to read the ESOS image partitions."
     exit 1
 fi
 
@@ -120,8 +133,8 @@ done
 # -o file                   # output file
 
 # Create the ISO file
-echo "### Creating the ISO file using 'genisoimage'..."
-genisoimage -J \
+echo "### Creating the ISO file..."
+mkisofs -J \
     -rock \
     -rational-rock \
     -input-charset utf-8 \
