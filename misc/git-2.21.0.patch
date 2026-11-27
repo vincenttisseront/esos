@@ -1,0 +1,14 @@
+--- a/http.h
++++ b/http.h
+@@ -45,7 +45,10 @@
+  * CURLOPT_USE_SSL was known as CURLOPT_FTP_SSL up to 7.16.4,
+  * and the constants were known as CURLFTPSSL_*
+ */
+-#if !defined(CURLOPT_USE_SSL) && defined(CURLOPT_FTP_SSL)
++#if !defined(CURLOPT_USE_SSL) && !defined(CURLUSESSL_TRY) && \
++	defined(CURLOPT_FTP_SSL)
++/* Curl 8 still defines CURLOPT_FTP_SSL, but CURLOPT_USE_SSL is an enum.
++ * Redefining CURLUSESSL_TRY here makes it expand to itself. */
+ #define CURLOPT_USE_SSL CURLOPT_FTP_SSL
+ #define CURLUSESSL_TRY CURLFTPSSL_TRY
+ #endif
